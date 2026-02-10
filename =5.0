@@ -1,0 +1,6 @@
+Requirement already satisfied: django-mongodb-backend in /home/gilson-russo/.pyenv/versions/3.12.2/lib/python3.12/site-packages (6.0.2)
+Requirement already satisfied: django in /home/gilson-russo/.pyenv/versions/3.12.2/lib/python3.12/site-packages (6.0.2)
+Requirement already satisfied: pymongo<5.0,>=4.7 in /home/gilson-russo/.pyenv/versions/3.12.2/lib/python3.12/site-packages (from django-mongodb-backend) (4.16.0)
+Requirement already satisfied: asgiref>=3.9.1 in /home/gilson-russo/.pyenv/versions/3.12.2/lib/python3.12/site-packages (from django) (3.11.1)
+Requirement already satisfied: sqlparse>=0.5.0 in /home/gilson-russo/.pyenv/versions/3.12.2/lib/python3.12/site-packages (from django) (0.5.5)
+Requirement already satisfied: dnspython<3.0.0,>=2.6.1 in /home/gilson-russo/.pyenv/versions/3.12.2/lib/python3.12/site-packages (from pymongo<5.0,>=4.7->django-mongodb-backend) (2.8.0)
