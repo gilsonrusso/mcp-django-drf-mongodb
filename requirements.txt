@@ -1,0 +1,7 @@
+django==6.0.2
+djangorestframework==3.16.1
+psycopg2-binary==2.9.11
+mcp==1.26.0
+httpx==0.28.1
+llama-index==0.14.14
+llama-index-llms-ollama==0.9.1
