@@ -7,6 +7,8 @@ from .serializers import TaskSerializer
 class TaskViewSet(viewsets.ModelViewSet):
     queryset = Task.objects.all()
     serializer_class = TaskSerializer
+    search_fields = ['title', 'description']
+    ordering_fields = ['created_at', 'title']
 
     def get_queryset(self):
         queryset = Task.objects.all()

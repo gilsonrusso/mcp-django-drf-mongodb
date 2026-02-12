@@ -1,10 +1,8 @@
-from llama_index.llms.ollama import Ollama
+from langchain_ollama import ChatOllama
 
-
-llm = Ollama(
+# Configuração do modelo Ollama para o LangChain
+llm = ChatOllama(
     model="qwen2.5-coder:7b",
-    request_timeout=120.0,
-    context_window=8000,
-    # Forçamos parâmetros simples para modelos que não suportam 'thinking' tags
-    additional_kwargs={"num_predict": 1024, "temperature": 0.1},
+    temperature=0.1,
+    num_predict=1024,
 )

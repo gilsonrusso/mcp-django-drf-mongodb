@@ -1,61 +1,39 @@
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 import httpx
 import logging
 import json
+import os
+import django
+from dotenv import load_dotenv
+
+# Carrega variáveis de ambiente do arquivo .env
+load_dotenv()
+
+# Configura o ambiente Django para permitir imports do core
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'mcp_project.settings')
+django.setup()
+
+# Importa o router e o registry
+from core.urls import router
+from core.mcp_registry import DRFMCPRegistry
 
 # Configuração básica de logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# Configurações do Django API
+API_URL = "http://localhost:8000/api"
+API_TOKEN = os.getenv("DJANGO_API_TOKEN")
+
 # Cria o servidor MCP
 mcp = FastMCP("DjangoTaskManager")
 
-# URL base da API Django
-API_URL = "http://localhost:8000/api/tasks/"
+# Registra automaticamente todas as ferramentas baseadas no Router do DRF
+registry = DRFMCPRegistry(mcp, API_URL, API_TOKEN)
+registry.register_router(router)
 
-@mcp.tool()
-async def list_tasks():
-    """Lista todas as tarefas do banco de dados PostgreSQL via API Django."""
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(API_URL)
-            response.raise_for_status()
-            tasks = response.json()
-            if not tasks:
-                return "Nenhuma tarefa encontrada no banco de dados."
-            return json.dumps(tasks, indent=2)
-        except Exception as e:
-            logger.error(f"Erro ao listar tarefas: {str(e)}")
-            return f"Erro ao listar tarefas: {str(e)}"
-
-@mcp.tool()
-async def create_task(title: str, description: str):
-    """Cria uma nova tarefa no banco de dados PostgreSQL via API Django."""
-    async with httpx.AsyncClient() as client:
-        try:
-            data = {"title": title, "description": description}
-            response = await client.post(API_URL, json=data)
-            response.raise_for_status()
-            return response.json()
-        except Exception as e:
-            logger.error(f"Erro ao criar tarefa: {str(e)}")
-            return f"Erro ao criar tarefa: {str(e)}"
-
-@mcp.tool()
-async def list_completed_tasks():
-    """Lista apenas as tarefas que já foram marcadas como concluídas."""
-    async with httpx.AsyncClient() as client:
-        try:
-            # Usando a nova rota customizada /api/tasks/completed/
-            response = await client.get(f"{API_URL}completed/")
-            response.raise_for_status()
-            tasks = response.json()
-            if not tasks:
-                return "Nenhuma tarefa marcada como concluída encontrada."
-            return json.dumps(tasks, indent=2)
-        except Exception as e:
-            return f"Erro ao listar tarefas concluídas: {str(e)}"
-
+# Mantemos os prompts manuais por enquanto, pois eles são mais "criativos" 
+# e menos "estruturais" que os endpoints da API.
 @mcp.prompt()
 def sugestao_tarefa(tema: str) -> str:
     """Gera uma sugestão de tarefa baseada em um tema."""

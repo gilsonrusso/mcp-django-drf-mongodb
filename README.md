@@ -55,18 +55,42 @@ python mcp_client.py
 
 ---
 
-## 🛠️ Novidades do Projeto
-
-- **MCP Prompts**: O servidor agora fornece modelos de resposta e sugestões dinâmicas.
-- **Validação Rigorosa**: A descrição da tarefa é um campo obrigatório no banco PostgreSQL.
+- **Introspecção Profunda (Deep Mapping) ⚖️**: O `DRFMCPRegistry` agora extrai automaticamente todas as rotas, campos obrigatórios (via Serializers) e parâmetros de busca/paginação do Django, sem necessidade de configuração manual.
+- **Assinaturas Dinâmicas**: A IA vê exatamente quais campos são obrigatórios e quais são opcionais, evitando erros de preenchimento.
+- **Auto-Documentação**: Gera o arquivo `mcp_mappings.md` com o mapa detalhado de todas as ferramentas disponíveis.
 - **Logs de Debug**: O cliente mostra `[DEBUG]` para que você veja a conversa entre a IA e o Servidor.
 
 ---
 
 ## 📚 Arquivos Principais
 
-- `mcp_server.py`: Onde moram as **Tools** e **Prompts**.
+- `mcp_server.py`: Onde moram os **Tools** e **Prompts**.
 - `mcp_client.py`: O agente autônomo baseado em LlamaIndex.
 - `core/models.py`: A estrutura da tarefa (Título e Descrição).
+- `core/mcp_registry.py`: O motor de **Auto-Discovery** que faz o mapeamento inteligente do Django para o MCP.
+- `mcp_mappings.md`: Documentação gerada automaticamente detalhando as ferramentas registradas.
+
+---
+
+## 🛠️ Comandos de Desenvolvedor (FastMCP CLI)
+
+O `FastMCP` fornece ferramentas poderosas para inspecionar e testar o seu servidor:
+
+- **Listar Ferramentas**: Veja tudo o que o Auto-Discovery mapeou:
+  ```bash
+  fastmcp list mcp_server.py
+  ```
+- **Interface de Teste (Inspector)**: Abre uma interface web para testar as ferramentas:
+  ```bash
+  fastmcp dev mcp_server.py
+  ```
+- **Relatório Técnico**: Veja o esquema JSON completo do servidor:
+  ```bash
+  fastmcp inspect mcp_server.py
+  ```
+- **Atualizar Documentação**: Gera o arquivo `mcp_mappings.md` com os mapeamentos atuais:
+  ```bash
+  python core/mcp_registry.py
+  ```
 
 **Dica:** Leia o arquivo `APRENDIZADO.md` para entender a teoria por trás de cada linha de código! 🚀🍿
