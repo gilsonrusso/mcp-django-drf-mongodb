@@ -1,8 +1,8 @@
-# Aprendizado: FastMCP + LangChain (Django/PostgreSQL)
+# Aprendizado: FastMCP + OpenAPI + LangChain
 
-Este documento explica os conceitos fundamentais do projeto, focando na integração entre o **FastMCP** e o **LangChain** para gerenciar tarefas no Django.
+Este documento explica a arquitetura moderna do projeto, focando na integração **OpenAPI → MCP → LangChain**.
 
-## 🗺️ Mapa Mental: Arquitetura
+## 🗺️ Arquitetura Desacoplada
 
 ```mermaid
 graph TD
@@ -13,56 +13,91 @@ graph TD
         Client <--> LangChain[LangChain Agent]
     end
 
-    subgraph "Camada de Integração (MCP)"
-        Client <--> Server[mcp_server.py]
-        Server -- "Tools & Prompts" --> Client
+    subgraph "Camada MCP (Gateway)"
+        Client <--> Gateway[mcp_gateway.py]
+        Gateway -- "Busca Schema" --> Django
+        Gateway -- "Cria Tools" --> FastMCP[FastMCP.from_openapi]
     end
 
     subgraph "Camada de Back-end (Django)"
-        Server <--> API[Django Rest Framework]
-        API <--> Models[Models / PostgreSQL]
+        Django[Django API :8000]
+        Django <--> DRF[Django Rest Framework]
+        DRF <--> Models[Models / PostgreSQL]
+        Django -- "Gera" --> OpenAPI[OpenAPI Schema]
     end
 ```
 
 ## Componentes Principais
 
-### 1. O Servidor: `mcp_server.py` (FastMCP)
+### 1. Django API (Backend)
 
-O servidor MCP é o que conecta a Inteligência Artificial ao seu código.
+- **Models**: Define a estrutura das tarefas
+- **DRF**: Expõe endpoints REST
+- **drf-spectacular**: Gera automaticamente o schema OpenAPI
+- **Endpoints**:
+  - `/api/schema/` - Schema JSON
+  - `/api/schema/swagger-ui/` - Interface de testes
 
-- **Tools (`@mcp.tool`)**: São as ações (ex: `list_tasks`).
-- **Prompts (`@mcp.prompt`)**: São templates de conversa.
+### 2. MCP Gateway (`mcp_gateway.py`)
 
-### 2. O Cliente: `mcp_client.py` (LangChain)
+Este é o **coração da integração**. Ele:
 
-Este arquivo utiliza o **LangChain** para orquestrar as ferramentas do servidor.
+- **Busca o schema OpenAPI** do Django na inicialização
+- **Usa `FastMCP.from_openapi()`** para criar ferramentas automaticamente
+- **Roda independentemente** (pode ser dockerizado)
+- **Expõe via HTTP (streamable-http)** para clientes MCP
 
-- **Agente ReAct**: Utiliza o padrão Thought -> Action -> Observation.
-- **Integração**: Transforma automaticamente as ferramentas do MCP em ferramentas do LangChain.
+**Vantagens:**
 
-### 3. O Back-end: Django + PostgreSQL
+- Zero configuração manual
+- Qualquer mudança no Django é refletida automaticamente
+- Compatível com qualquer API que tenha OpenAPI
 
-- **Models**: Define a estrutura das tarefas.
-- **DRF**: Expõe a API que o servidor MCP consome via HTTP.
-- **Docker**: Mantém o banco de dados PostgreSQL rodando.
+### 3. Cliente LangChain (`mcp_client.py`)
 
-### 4. O Cérebro da Integração: `DRFMCPRegistry` 🧠⚖️
-
-Este é o componente mais avançado do projeto. Ele elimina a necessidade de registrar ferramentas manualmente:
-
-- **Introspecção de Serializers**: Ele lê os Serializers do DRF para descobrir quais campos são obrigatórios (`required=True`). Isso gera ferramentas no MCP que forçam a IA a pedir os dados necessários (ex: `description`).
-- **Mapeamento de Rotas**: Utiliza o `router.get_routes()` do Django para mapear URLs reais, convertendo automaticamente regex complexas em variáveis legíveis para o MCP (como `{pk}`).
-- **Filtros e Paginação**: Identifica automaticamente se a ViewSet suporta `search_fields` ou `ordering_fields` e expõe esses parâmetros como argumentos opcionais para a IA.
-- **Segurança Partial (PATCH)**: Sabe diferenciar uma criação de uma atualização parcial, tornando campos opcionais no `PATCH` mesmo que sejam obrigatórios no banco.
+- **Conecta via HTTP** ao Gateway MCP (usa `langchain-mcp-adapters`)
+- **Transporte Oficial**: Usa `MultiServerMCPClient`
+- **Agente LangChain**: Usa API oficial `create_agent` (v0.3+)
+- **LLM Local**: Ollama com Qwen2.5-Coder
 
 ## 🔄 Fluxo de Funcionamento
 
-1. O **Usuário** pede algo.
-2. O **Agente (LlamaIndex)** orquestra a chamada.
-3. O **Servidor MCP** (via Registry) expõe a ferramenta com a assinatura exata.
-4. O **Django** processa a lógica de negócio e persiste no **PostgreSQL**.
-5. O resultado volta formatado em JSON para a IA responder.
+1. **Usuário** faz uma pergunta
+2. **Agente LangChain** analisa e decide qual ferramenta usar
+3. **Cliente MCP** chama a ferramenta via HTTP
+4. **Gateway MCP** traduz para uma requisição HTTP à API Django
+5. **Django** processa e retorna JSON
+6. **Resposta** volta pelo mesmo caminho até o usuário
+
+## 🎯 Por Que OpenAPI?
+
+### Antes (Introspecção Manual)
+
+- Código customizado para ler ViewSets
+- Manutenção complexa
+- Acoplado ao Django
+
+### Agora (OpenAPI)
+
+- Padrão da indústria
+- Funciona com qualquer API
+- Gateway totalmente independente
+- Fácil de escalar e dockerizar
+
+## 🔑 Conceitos-Chave
+
+### Model Context Protocol (MCP)
+
+Protocolo que permite LLMs interagirem com sistemas externos de forma padronizada.
+
+### OpenAPI
+
+Especificação que descreve APIs REST de forma legível por máquinas.
+
+### FastMCP.from_openapi()
+
+Método do FastMCP que converte automaticamente endpoints OpenAPI em ferramentas MCP.
 
 ---
 
-**💡 Dica:** O Model Context Protocol (MCP) garante que seu back-end seja agnóstico à IA. Você pode trocar o cliente por qualquer outro orquestrador, e o seu servidor de dados continuará funcionando! 🚀🍿
+**💡 Dica:** Esta arquitetura permite que você troque o Django por **qualquer API** que tenha OpenAPI (FastAPI, Express, etc.) sem mudar o cliente! 🚀
